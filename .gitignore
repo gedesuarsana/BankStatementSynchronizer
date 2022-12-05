@@ -1,0 +1,22 @@
+# Package Files #
+*.jar
+*.war
+*.ear
+
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Maven
+log/
+target/
+
+
+# Compiled Files
+*.class
+bin/
+build/
+/bin1/
+java/build/**
