@@ -17,6 +17,12 @@ spring:
       ddl-auto: create
     database: postgresql
 
+ftp:
+  host: localhost
+  port: 2121
+  username: admin
+  password: admin
+
 name: test-YAML
 
 
@@ -40,5 +46,12 @@ spring:
     hibernate:
       ddl-auto: create
     database: postgresql
+
+ftp:
+  host: localhost
+  port: 2121
+  username: admin
+  password: admin
+
 name: prod-YAML
 

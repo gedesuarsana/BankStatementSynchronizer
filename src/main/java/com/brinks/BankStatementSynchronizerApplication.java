@@ -2,6 +2,8 @@ package com.brinks;
 
 import com.brinks.models.InvoiceStatus;
 import com.brinks.repository.InvoiceStatusRepository;
+import com.brinks.services.FTPService;
+import org.apache.commons.net.ftp.FTPClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,9 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
     private String name;
 
     @Autowired
+    FTPService ftpService;
+
+    @Autowired
     InvoiceStatusRepository invoiceStatusRepository;
 
     Logger logger = LoggerFactory.getLogger(BankStatementSynchronizerApplication.class);
@@ -33,11 +38,9 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
 
         logger.info("Program Starting!!!");
 
-        InvoiceStatus invoiceStatus = new InvoiceStatus();
-        invoiceStatus.setInvoice("invoice1");
-        invoiceStatus.setStatus("pending!");
+        FTPClient ftpClient = ftpService.loginFtp();
 
-        invoiceStatusRepository.save(invoiceStatus);
+        ftpService.printTree("/",ftpClient);
 
     }
 
