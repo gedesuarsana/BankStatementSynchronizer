@@ -12,6 +12,7 @@
 # Maven
 log/
 target/
+logs/
 
 
 # Compiled Files
