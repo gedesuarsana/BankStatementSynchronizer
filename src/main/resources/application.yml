@@ -1,0 +1,44 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/BankStatementSynchronizerDB
+    platform: postgres
+    initialization-mode: always
+    continue-on-error: true
+  jpa:
+    show-sql: true
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create
+    database: postgresql
+
+name: test-YAML
+
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/BankStatementSynchronizerDB
+    platform: postgres
+    initialization-mode: always
+    continue-on-error: true
+  jpa:
+    show-sql: true
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create
+    database: postgresql
+name: prod-YAML
+
