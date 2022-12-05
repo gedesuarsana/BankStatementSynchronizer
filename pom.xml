@@ -62,6 +62,13 @@
             <version>3.8.0</version>
         </dependency>
 
+
+        <dependency>
+            <groupId>com.prowidesoftware</groupId>
+            <artifactId>pw-swift-core</artifactId>
+            <version>SRU2022-9.3.5</version>
+        </dependency>
+
     </dependencies>
 
     <build>
