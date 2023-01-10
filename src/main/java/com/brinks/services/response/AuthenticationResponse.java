@@ -1,10 +1,20 @@
-package com.brinks.services.request;
+package com.brinks.services.response;
 
 public class AuthenticationResponse {
 
     private String responseCode;
-    
+
     private String responseMsg;
+
+    private String token;
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
 
     public String getResponseCode() {
         return responseCode;

@@ -19,12 +19,25 @@ spring:
 
 ftp:
   host: localhost
-  port: 2121
-  username: admin
-  password: admin
+  port: 21
+  username: gede
+  password: gede
 
 name: test-YAML
 
+
+api:
+  authentication:
+    url: http://10.193.110.70:6688/authenticate
+    authorization-header: 29kweu%2shdj111[)asDehac
+    vendorid: ABC
+    systemid: testar
+    entityid: ZCSDAT
+    userid: ary
+  inquiry:
+    url: http://10.193.110.70:6688/inqarinv
+  list:
+    url: http://10.193.110.70:6688/listarbat
 
 
 ---
@@ -35,7 +48,7 @@ spring:
   datasource:
     driver-class-name: org.postgresql.Driver
     username: postgres
-    password: postgres
+    password: cc
     url: jdbc:postgresql://localhost:5432/BankStatementSynchronizerDB
     platform: postgres
     initialization-mode: always
@@ -49,9 +62,22 @@ spring:
 
 ftp:
   host: localhost
-  port: 2121
-  username: admin
-  password: admin
+  port: 21
+  username: gede
+  password: gede
 
 name: prod-YAML
+
+api:
+  authentication:
+    url: http://10.193.110.70:6688/authenticate
+    authorization-header: 29kweu%2shdj111[)asDehac
+    vendorid: ABC
+    systemid: testar
+    entityid: ZCSDAT
+    userid: ary
+  inquiry:
+    url: http://10.193.110.70:6688/inqarinv
+  list:
+    url: http://10.193.110.70:6688/listarbat
 
