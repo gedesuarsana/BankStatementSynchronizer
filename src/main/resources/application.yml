@@ -14,7 +14,7 @@ spring:
     show-sql: true
     generate-ddl: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     database: postgresql
 
 ftp:
@@ -38,6 +38,18 @@ api:
     url: http://10.193.110.70:6688/inqarinv
   list:
     url: http://10.193.110.70:6688/listarbat
+  ar:
+    url: http://10.193.110.70:6688/addarrec
+
+statement:
+  regex-common: "[cC][0-9]{2}\\S+"
+  regex-list: "[cC][0-9]{8,10}>>>
+               [cC][0-9]{2}[-| ][0-9]{6,8}"
+
+app:
+  tax-percentage: 20
+
+
 
 
 ---
@@ -80,4 +92,15 @@ api:
     url: http://10.193.110.70:6688/inqarinv
   list:
     url: http://10.193.110.70:6688/listarbat
+  ar:
+    url: http://10.193.110.70:6688/addarrec
+
+
+statement:
+  regex-common: "[cC][0-9]{2}\\S+"
+  regex-list: "[cC][0-9]{8,10}>>>
+               [cC][0-9]{2}[-| ][0-9]{6,8}"
+
+app:
+  tax-percentage: 20
 

@@ -1,9 +1,11 @@
 package com.brinks.services.impl;
 
 import com.brinks.services.BrinksAPIService;
+import com.brinks.services.request.ARRequest;
 import com.brinks.services.request.AuthenticationRequest;
 import com.brinks.services.request.InquiryRequest;
 import com.brinks.services.request.ListRequest;
+import com.brinks.services.response.ARResponse;
 import com.brinks.services.response.AuthenticationResponse;
 import com.brinks.services.response.InquiryResponse;
 import com.brinks.services.response.ListResponse;
@@ -16,8 +18,8 @@ import org.springframework.web.client.RestTemplate;
 @Service("BrinksAPIService")
 public class BrinksAPIServiceImpl implements BrinksAPIService {
 
-    @Autowired
-    RestTemplate restTemplate;
+
+    RestTemplate restTemplate = new RestTemplate();
 
 
     @Value("${api.authentication.url}")
@@ -44,10 +46,31 @@ public class BrinksAPIServiceImpl implements BrinksAPIService {
     @Value("${api.list.url}")
     private String listURL;
 
+    @Value("${api.ar.url}")
+    private String arURL;
+
 
 
 
     public AuthenticationResponse authenticate(AuthenticationRequest request){
+
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", authenticationAuthorizationHeader);
+        HttpEntity<AuthenticationRequest> entity = new HttpEntity<AuthenticationRequest>(request, headers);
+
+        ResponseEntity<AuthenticationResponse> responseEntity = restTemplate.exchange(authenticationURL, HttpMethod.POST, entity, AuthenticationResponse.class);
+
+        return responseEntity.getBody();
+    }
+
+    public AuthenticationResponse authenticate(){
+        AuthenticationRequest request = new AuthenticationRequest();
+        request.setEntityid(authenticationEntityId);
+        request.setSystemid(authenticationSystemId);
+        request.setVendorid(authenticationVendorId);
+        request.setUserid(authenticationUserId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -85,6 +108,19 @@ public class BrinksAPIServiceImpl implements BrinksAPIService {
         return responseEntity.getBody();
     }
 
+
+    public ARResponse ar(String token, ARRequest request){
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Token", token);
+        HttpEntity<ARRequest> entity = new HttpEntity<ARRequest>(request, headers);
+
+        ResponseEntity<ARResponse> responseEntity = restTemplate.exchange(arURL, HttpMethod.POST, entity, ARResponse.class);
+
+        return responseEntity.getBody();
+
+    }
 
 
 
