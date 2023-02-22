@@ -43,8 +43,10 @@ api:
 
 statement:
   regex-common: "[cC][0-9]{2}\\S+"
-  regex-list: "[cC][0-9]{8,10}>>>
-               [cC][0-9]{2}[-| ][0-9]{6,8}"
+  regex-list: "[cC][0-9]{8}>>>
+               [cC][0-9]{2}[-| ][0-9]{6}"
+  regex-extend: "_[0-9]{2}"
+  regex-repetition: ",[0-9]{2}"
 
 app:
   tax-percentage: 20
@@ -98,8 +100,7 @@ api:
 
 statement:
   regex-common: "[cC][0-9]{2}\\S+"
-  regex-list: "[cC][0-9]{8,10}>>>
-               [cC][0-9]{2}[-| ][0-9]{6,8}"
+  regex-list: "[cC][0-9]{8,10}>>>[cC][0-9]{2}[-| ][0-9]{6,8}"
 
 app:
   tax-percentage: 20

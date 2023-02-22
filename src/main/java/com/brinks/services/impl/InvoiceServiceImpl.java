@@ -36,6 +36,12 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Value("${statement.regex-common}")
     String regexCommon;
 
+    @Value("${statement.regex-extend}")
+    String regexExtend;
+
+    @Value("${statement.regex-repetition}")
+    String regexRepetition;
+
 
     @Autowired
     InvoiceStatusRepository invoiceStatusRepository;
@@ -55,12 +61,24 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     public void extratInvoiceFromStatement(BankStatement bankStatement) {
 
+        String afterRemoveWhiteSpace = bankStatement.getStatement().replaceAll("\\r\\n"," ");
+        String afterrepe = uniformFormatRegexRepetition(afterRemoveWhiteSpace);
+
+
+
+//        String afterrepe = uniformFormatRegexRepetition(bankStatement.getStatement());
+//
+        String afterextend = uniformFormatRegexExtend(afterrepe);
+
+
+
         boolean found = false;
+        int index=1;
         for (String regex : regexList) {
             logger.info("regex:" + regex);
             Pattern pattern = Pattern.compile(regex);
 
-            Matcher matcher = pattern.matcher(bankStatement.getStatement());
+            Matcher matcher = pattern.matcher(afterextend);
 
             Set<String> invoiceName = new HashSet<>();
             while (matcher.find()) {
@@ -73,14 +91,18 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (!found) {
                 logger.info("No match found.");
             } else {
+
                 for (String invoice : invoiceName) {
                     InvoiceStatus invoiceStatus = new InvoiceStatus();
                     invoiceStatus.setBank_statement_id(bankStatement.getId());
                     invoiceStatus.setStatus("INCOMPLETE");
                     invoiceStatus.setAr_status("INCOMPLETE");
                     invoiceStatus.setInquiry_status("INCOMPLETE");
-                    invoiceStatus.setInvoice_name(invoice);
+                    invoiceStatus.setInvoice_name(reformatInvoiceName(invoice));
+                    invoiceStatus.setIndex_in_statement(index);
                     invoiceStatusRepository.save(invoiceStatus);
+                    logger.info("save invoice:"+invoiceStatus.getInvoice_name());
+                    index++;
                 }
             }
 
@@ -91,7 +113,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         Pattern commonPattern = Pattern.compile(regexCommon);
 
-        Matcher commonMatcher = commonPattern.matcher(bankStatement.getStatement());
+        Matcher commonMatcher = commonPattern.matcher(afterextend);
 
         boolean commonFound = false;
         while (commonMatcher.find()) {
@@ -119,38 +141,54 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
 
-    public Map<String, BigDecimal> getAccumulatedInvoice() {
-        Map<String, BigDecimal> result = new HashMap<String, BigDecimal>();
-
-        List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByStatus("INCOMPLETE");
-
-        for (InvoiceStatus item : invoiceStatusList) {
-            BankStatement bankStatement = bankStatementRepository.findById(item.getBank_statement_id()).get();
-
-
-            if (result.get(item.getInvoice_name()) == null) {
-                result.put(item.getInvoice_name(), bankStatement.getAmount());
-            } else {
-                BigDecimal amount = result.get(item.getInvoice_name());
-                BigDecimal newAmount = amount.add(bankStatement.getAmount());
-                result.put(item.getInvoice_name(), newAmount);
-            }
-        }
-        return result;
-    }
+//    public Map<String, BigDecimal> getAccumulatedInvoice() {
+//        Map<String, BigDecimal> result = new HashMap<String, BigDecimal>();
+//
+//        List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByStatus("INCOMPLETE");
+//
+//        for (InvoiceStatus item : invoiceStatusList) {
+//            BankStatement bankStatement = bankStatementRepository.findById(item.getBank_statement_id()).get();
+//
+//
+//            if (result.get(item.getInvoice_name()) == null) {
+//                result.put(item.getInvoice_name(), bankStatement.getAmount());
+//            } else {
+//                BigDecimal amount = result.get(item.getInvoice_name());
+//                BigDecimal newAmount = amount.add(bankStatement.getAmount());
+//                result.put(item.getInvoice_name(), newAmount);
+//            }
+//        }
+//        return result;
+//    }
 
 
     public void processInvoice() {
 
-        Map<String, BigDecimal> invoices = getAccumulatedInvoice();
+        //Map<String, BigDecimal> invoices = getAccumulatedInvoice();
+
+        List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByStatus("INCOMPLETE");
 
         //call the authentication Brinks API
 
         AuthenticationResponse authenticationResponse = brinksAPIService.authenticate();
 
         if (!Objects.isNull(authenticationResponse.getToken())) {
-            for (String invoiceName : invoices.keySet()) {
-                List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByInvoiceName(invoiceName);
+
+            for (InvoiceStatus invoiceStatus : invoiceStatusList) {
+
+                // List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByInvoiceName(invoiceName);
+
+                // finding the prevously invoice and sum
+                List<InvoiceStatus> previousInvoiceList = invoiceStatusRepository.findByStatusAndInvoiceName("COMPLETED",invoiceStatus.getInvoice_name());
+
+                BigDecimal totalPreviouslyAmount = new BigDecimal(0);
+                for(InvoiceStatus item:previousInvoiceList){
+                    BankStatement bankStatement = bankStatementRepository.findById(item.getBank_statement_id()).get();
+                    totalPreviouslyAmount = totalPreviouslyAmount.add(bankStatement.getAmount());
+                 }
+
+
+
 
 
                 InquiryRequest inquiryRequest = new InquiryRequest();
@@ -158,7 +196,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 //todo where got the value for custnum
                 inquiryRequest.setCustnum("?");
 
-                inquiryRequest.setDocnum(reformatInvoiceName(invoiceName));
+                inquiryRequest.setDocnum(invoiceStatus.getInvoice_name());
 
                 InquiryResponse inquiryResponse = null;
 
@@ -166,38 +204,50 @@ public class InvoiceServiceImpl implements InvoiceService {
                 try {
                     inquiryResponse = brinksAPIService.inquiry(authenticationResponse.getToken(), inquiryRequest);
 
+                    //save the response amount
+
+                    invoiceStatus.setInquiry_amount(new BigDecimal(inquiryResponse.getAmt()));
+
+
+
                 } catch (Exception e) {
-                    for (InvoiceStatus item : invoiceStatusList) {
-                        item.setInquiry_status("ERROR");
-                    }
+
+                        invoiceStatus.setInquiry_status("ERROR");
+
                     e.printStackTrace();
                     logger.error("error:" + e.getMessage());
                 }
 
                 if (Objects.nonNull(inquiryResponse) && inquiryResponse.getResponseCode() == "0") {
-                    for (InvoiceStatus item : invoiceStatusList) {
-                        item.setInquiry_status("COMPLETED");
-                    }
+
+                        invoiceStatus.setInquiry_status("COMPLETED");
+
                 } else {
-                    logger.error("error: responseCode:"+inquiryResponse);
-                    for (InvoiceStatus item : invoiceStatusList) {
-                        item.setInquiry_status("ERROR");
-                    }
+
+                        invoiceStatus.setInquiry_status("ERROR");
+
                 }
+
 
 
                 //process the amount
 
-                BigDecimal bankAmount = invoices.get(invoiceName);
+                BankStatement bankStatement = bankStatementRepository.findById(invoiceStatus.getBank_statement_id()).get();
+
+                BigDecimal bankAmount = bankStatement.getAmount().add(totalPreviouslyAmount);
 
                 BigDecimal apiAmount = new BigDecimal(inquiryResponse.getAmt());
                 BigDecimal apiAmountBeforeTax = apiAmount.divide(new BigDecimal(100).subtract(tax)).multiply(new BigDecimal(100));
 
+
+                //set remaining amount
+                invoiceStatus.setRemaining_amount(apiAmountBeforeTax.subtract(bankAmount));
+
                 if (apiAmountBeforeTax.subtract(bankAmount).compareTo(new BigDecimal(0)) <= 0) {
 
-                    for (InvoiceStatus item : invoiceStatusList) {
-                        item.setStatus("COMPLETED");
-                    }
+
+                        invoiceStatus.setStatus("COMPLETED");
+
                     // call AR
 
 
@@ -210,34 +260,34 @@ public class InvoiceServiceImpl implements InvoiceService {
                         arResponse = brinksAPIService.ar(authenticationResponse.getToken(), arRequest);
 
                     } catch (Exception e) {
-                        for (InvoiceStatus item : invoiceStatusList) {
-                            item.setAr_status("ERROR");
-                        }
+
+                            invoiceStatus.setAr_status("ERROR");
+
                         e.printStackTrace();
                         logger.error("error:" + e.getMessage());
                     }
 
                     if (Objects.nonNull(arResponse) && arResponse.getResponseCode() == "0") {
-                        for (InvoiceStatus item : invoiceStatusList) {
-                            item.setAr_status("COMPLETED");
-                        }
+
+                            invoiceStatus.setAr_status("COMPLETED");
+
                     }else{
                         logger.error("error: responseCode:"+arResponse);
-                        for (InvoiceStatus item : invoiceStatusList) {
-                            item.setAr_status("ERROR");
-                        }
+
+                            invoiceStatus.setAr_status("ERROR");
+
                     }
 
 
                 } else {
-                    for (InvoiceStatus item : invoiceStatusList) {
-                        item.setStatus("PENDING");
-                    }
+
+                        invoiceStatus.setStatus("PENDING");
+
                 }
 
 
                 // save all status
-                invoiceStatusRepository.saveAll(invoiceStatusList);
+                invoiceStatusRepository.save(invoiceStatus);
 
             }
         }
@@ -250,6 +300,195 @@ public class InvoiceServiceImpl implements InvoiceService {
         } else {
             return invoiceName;
         }
+    }
+
+
+
+    private String uniformFormatRegexExtend(String statement){
+
+        logger.info("regex-extend:" + regexExtend);
+        Pattern pattern = Pattern.compile(regexExtend);
+
+        Matcher matcher = pattern.matcher(statement);
+
+        boolean found = false;
+        if (matcher.find()) {
+            logger.info("I found the extend text " + matcher.group() + " starting at index " +
+                    matcher.start() + " and ending at index " + matcher.end());
+            found = true;
+
+
+            //searching previous invoice pattern
+
+            String prefixStatement = statement.substring(0,matcher.start());
+            String suffixStatement = statement.substring(matcher.end(),statement.length());
+            String token = matcher.group();
+
+
+            logger.info("prev:"+prefixStatement);
+            logger.info("suff:"+suffixStatement);
+
+            int startPRV=0;
+            int endPRV=0;
+
+            for (String regex : regexList) {
+
+                Pattern patternPRV = Pattern.compile(regex);
+
+                Matcher matcherPRV = patternPRV.matcher(prefixStatement);
+
+                while (matcherPRV.find()) {
+                    startPRV = matcherPRV.start();
+                    endPRV = matcherPRV.end();
+                }
+            }
+
+            logger.info("startPRV:"+startPRV);
+            logger.info("endPRV:"+endPRV);
+
+            String invoicePRV = statement.substring(startPRV,endPRV).trim();
+
+            logger.info("prev-invoice:"+invoicePRV);
+
+
+            // iterate invoice until end
+
+            String invoicePRVNumberOnly = invoicePRV.replaceAll("[^0-9]", "");
+
+            String until = invoicePRVNumberOnly.substring(0,invoicePRVNumberOnly.length()-(token.length()-1))+token.substring(1);
+
+            int invoicePRVInt = Integer.parseInt(invoicePRVNumberOnly);
+            int untilInt = Integer.parseInt(until);
+
+            StringBuffer invoices = new StringBuffer();
+
+            for(int x=(invoicePRVInt+1);x<=untilInt;x++){
+                String invoice = ""+x;
+                invoices.append(" "+invoicePRV.substring(0,3)+"-"+invoice.substring(invoice.length()-6,invoice.length())+" ");
+            }
+
+            String newStatement = prefixStatement+invoices+suffixStatement;
+
+          return uniformFormatRegexExtend(newStatement);
+        }else{
+            logger.info("after regex-extend new statement:" + statement);
+            return statement;
+        }
+
+
+
+    }
+
+
+
+    private String uniformFormatRegexRepetition(String statement){
+
+        logger.info("regex-repetition:" + regexRepetition);
+        Pattern pattern = Pattern.compile(regexRepetition);
+
+        Matcher matcher = pattern.matcher(statement);
+
+        boolean found = false;
+        if (matcher.find()) {
+            logger.info("I found the repetition text " + matcher.group() + " starting at index " +
+                    matcher.start() + " and ending at index " + matcher.end());
+            found = true;
+
+
+            //searching previous invoice pattern
+
+            String prefixStatement = statement.substring(0,matcher.start());
+            String suffixStatement = statement.substring(matcher.end(),statement.length());
+            String token = matcher.group();
+
+
+            logger.info("prev:"+prefixStatement);
+            logger.info("suff:"+suffixStatement);
+
+            int startPRV=0;
+            int endPRV=0;
+
+            for (String regex : regexList) {
+
+                Pattern patternPRV = Pattern.compile(regex);
+
+                Matcher matcherPRV = patternPRV.matcher(prefixStatement);
+
+                while (matcherPRV.find()) {
+                    startPRV = matcherPRV.start();
+                    endPRV = matcherPRV.end();
+                }
+            }
+
+
+
+            String invoicePRV = statement.substring(startPRV,endPRV).trim();
+
+            logger.info("prev-invoice:"+invoicePRV);
+
+
+            // iterate invoice until end
+
+            String invoicePRVNumberOnly = invoicePRV.replaceAll("[^0-9]", "");
+
+            String until = invoicePRVNumberOnly.substring(0,invoicePRVNumberOnly.length()-(token.length()-1))+token.substring(1);
+
+            String newInvoice = " "+invoicePRV.substring(0,3)+"-"+until.substring(until.length()-6,until.length());
+
+            String newStatement = prefixStatement+newInvoice+suffixStatement;
+
+            return uniformFormatRegexRepetition(newStatement);
+        }else{
+            logger.info("after regex-repetition new statement:" + statement);
+            return statement;
+        }
+
+
+
+    }
+
+//
+//    private String removeWhiteCharInInvoice(String statement){
+//        Pattern pattern = Pattern.compile("[Cc]");
+//
+//        Matcher matcher = pattern.matcher(statement);
+//
+//        boolean found = false;
+//        while (matcher.find()) {
+//
+//        }
+//
+//        String prefixStatement = statement.substring(0,matcher.start());
+//        String suffixStatement = statement.substring(matcher.end(),statement.length());
+//
+//    }
+
+//
+//    public static void main(String args[]){
+//
+//       InvoiceServiceImpl x = new InvoiceServiceImpl();
+//       x.regexExtend ="_[0-9]{2}";
+//       x.regexRepetition=",[0-9]{2}";
+//       x.regexList = new ArrayList<>();
+//       x.regexList.add("[cC][0-9]{8,10}");
+//       x.regexList.add("[cC][0-9]{2}[-| ][0-9]{6,8}");
+//
+//
+//
+//        String afterrepe = x.uniformFormatRegexRepetition("CF220901571_C17-173332, C06-173269, C02- 173306_08");
+//        String output = x.uniformFormatRegexExtend(afterrepe);
+//
+//
+//    }
+
+
+
+
+
+    public static void main(String args){
+
+        String messsage="BO TIKI JALUR NUGRAHA EKAKU BCA\\n" +
+                "C01-175549_50/SCBTJ-RP/OCT/22 IN99992211031655";
     }
 
 

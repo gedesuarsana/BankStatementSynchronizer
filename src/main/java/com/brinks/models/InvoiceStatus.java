@@ -1,6 +1,7 @@
 package com.brinks.models;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 @Entity
@@ -37,8 +38,37 @@ public class InvoiceStatus {
 
     private String ar_status;
 
+    private Integer index_in_statement;
+
+    public Integer getIndex_in_statement() {
+        return index_in_statement;
+    }
+
+    public void setIndex_in_statement(Integer index_in_statement) {
+        this.index_in_statement = index_in_statement;
+    }
+
+    private BigDecimal inquiry_amount;
+
+    public BigDecimal getInquiry_amount() {
+        return inquiry_amount;
+    }
+
+    public void setInquiry_amount(BigDecimal inquiry_amount) {
+        this.inquiry_amount = inquiry_amount;
+    }
 
 
+
+    private BigDecimal remaining_amount;
+
+    public BigDecimal getRemaining_amount() {
+        return remaining_amount;
+    }
+
+    public void setRemaining_amount(BigDecimal remaining_amount) {
+        this.remaining_amount = remaining_amount;
+    }
 
     public String getInvoice_name() {
         return invoice_name;

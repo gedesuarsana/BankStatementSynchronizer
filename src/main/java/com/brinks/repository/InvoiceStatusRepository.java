@@ -13,7 +13,10 @@ public interface InvoiceStatusRepository extends CrudRepository<InvoiceStatus,In
 
  List<InvoiceStatus> findByStatus(String status);
 
- @Query(value="select * from invoice_status where invoice_name :invoiceName",nativeQuery=true)
+ @Query(value="select * from invoice_status where invoice_name =:invoiceName and status =:status",nativeQuery=true)
+ List<InvoiceStatus> findByStatusAndInvoiceName(@Param("status") String status,@Param("invoiceName")String invoiceName);
+
+ @Query(value="select * from invoice_status where invoice_name =:invoiceName",nativeQuery=true)
  List<InvoiceStatus> findByInvoiceName(@Param("invoiceName")String invoiceName);
 
 }
