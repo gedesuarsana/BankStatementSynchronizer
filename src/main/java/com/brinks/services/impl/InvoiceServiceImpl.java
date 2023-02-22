@@ -166,7 +166,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         //Map<String, BigDecimal> invoices = getAccumulatedInvoice();
 
-        List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByStatus("INCOMPLETE");
+        List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByStatusOrderByIndexInStatementDesc("INCOMPLETE");
 
         //call the authentication Brinks API
 
@@ -234,16 +234,25 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 BankStatement bankStatement = bankStatementRepository.findById(invoiceStatus.getBank_statement_id()).get();
 
-                BigDecimal bankAmount = bankStatement.getAmount().add(totalPreviouslyAmount);
+                BigDecimal bankAmount = new BigDecimal(0);
+
+                //many invoice in one line
+                if(invoiceStatus.getIndex_in_statement()>1){
+                 InvoiceStatus prevInvoiceStatus =    invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()-1);
+
+                    bankAmount = prevInvoiceStatus.getRemaining_amount().add(totalPreviouslyAmount);
+                }else{
+                    bankAmount = bankStatement.getAmount().add(totalPreviouslyAmount);
+                }
 
                 BigDecimal apiAmount = new BigDecimal(inquiryResponse.getAmt());
                 BigDecimal apiAmountBeforeTax = apiAmount.divide(new BigDecimal(100).subtract(tax)).multiply(new BigDecimal(100));
 
 
                 //set remaining amount
-                invoiceStatus.setRemaining_amount(apiAmountBeforeTax.subtract(bankAmount));
+                invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmountBeforeTax));
 
-                if (apiAmountBeforeTax.subtract(bankAmount).compareTo(new BigDecimal(0)) <= 0) {
+                if (bankAmount.subtract(apiAmountBeforeTax).compareTo(new BigDecimal(0)) >= 0) {
 
 
                         invoiceStatus.setStatus("COMPLETED");
