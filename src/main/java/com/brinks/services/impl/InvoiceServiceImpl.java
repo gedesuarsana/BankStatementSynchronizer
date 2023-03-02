@@ -61,13 +61,9 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     public void extratInvoiceFromStatement(BankStatement bankStatement) {
 
-        String afterRemoveWhiteSpace = bankStatement.getStatement().replaceAll("\\r\\n"," ");
-        String afterrepe = uniformFormatRegexRepetition(afterRemoveWhiteSpace);
-
-
-
-//        String afterrepe = uniformFormatRegexRepetition(bankStatement.getStatement());
-//
+        String afterRemoveEnter = bankStatement.getStatement().replaceAll("\\r\\n"," ");
+        String afterRemoveWhiteSpaceAndO = removeWhiteCharInInvoiceAndReplaceO(afterRemoveEnter);
+        String afterrepe = uniformFormatRegexRepetition(afterRemoveWhiteSpaceAndO);
         String afterextend = uniformFormatRegexExtend(afterrepe);
 
 
@@ -304,11 +300,15 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private String reformatInvoiceName(String invoiceName) {
+        String output;
+
         if (!invoiceName.contains("-")) {
-            return invoiceName.substring(0, 3) + "-" + invoiceName.substring(3);
+            output= invoiceName.substring(0, 3) + "-" + invoiceName.substring(3);
         } else {
-            return invoiceName;
+            output= invoiceName;
         }
+
+        return  output.trim();
     }
 
 
@@ -344,7 +344,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 Pattern patternPRV = Pattern.compile(regex);
 
-                Matcher matcherPRV = patternPRV.matcher(prefixStatement);
+                Matcher matcherPRV = patternPRV.matcher("CF230200455_C01-000001");
 
                 while (matcherPRV.find()) {
                     startPRV = matcherPRV.start();
@@ -456,49 +456,89 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     }
 
-//
-//    private String removeWhiteCharInInvoice(String statement){
-//        Pattern pattern = Pattern.compile("[Cc]");
-//
-//        Matcher matcher = pattern.matcher(statement);
-//
-//        boolean found = false;
-//        while (matcher.find()) {
-//
-//        }
-//
-//        String prefixStatement = statement.substring(0,matcher.start());
-//        String suffixStatement = statement.substring(matcher.end(),statement.length());
-//
-//    }
 
-//
-//    public static void main(String args[]){
-//
-//       InvoiceServiceImpl x = new InvoiceServiceImpl();
-//       x.regexExtend ="_[0-9]{2}";
-//       x.regexRepetition=",[0-9]{2}";
-//       x.regexList = new ArrayList<>();
-//       x.regexList.add("[cC][0-9]{8,10}");
-//       x.regexList.add("[cC][0-9]{2}[-| ][0-9]{6,8}");
-//
-//
-//
+
+    private String removeWhiteCharInInvoiceAndReplaceO(String statement){
+        Pattern pattern = Pattern.compile("[Cc][0-9oO]{2}");
+
+        Matcher matcher = pattern.matcher(statement);
+
+
+        while (matcher.find()) {
+
+            int startChar = matcher.start();
+            int invoiceLength = 9;
+
+            for(int x=0;x<invoiceLength;x++) {
+                char currentChar = statement.charAt(startChar + x);
+                if (currentChar == ' ' || currentChar == '-') {
+                    invoiceLength++;
+                }
+            }
+
+            String prefixStatement = statement.substring(0,matcher.start());
+            String invoice = statement.substring(matcher.start(),(matcher.start()+invoiceLength));
+            invoice = invoice.replaceAll(" ","");
+            invoice = invoice.replaceAll("[oO]","0");
+            String suffixStatement = statement.substring((matcher.start()+invoiceLength),statement.length());
+            statement = prefixStatement+invoice+suffixStatement;
+        }
+        return statement;
+    }
+
+
+    public static void main(String args[]){
+
+       InvoiceServiceImpl x = new InvoiceServiceImpl();
+       x.regexExtend ="_[0-9]{2}";
+       x.regexRepetition=",[0-9]{2}";
+       x.regexList = new ArrayList<>();
+       x.regexList.add("[cC][0-9]{8}");
+       x.regexList.add("[cC][0-9]{2}[-| ][0-9]{6}");
+
+
+
 //        String afterrepe = x.uniformFormatRegexRepetition("CF220901571_C17-173332, C06-173269, C02- 173306_08");
 //        String output = x.uniformFormatRegexExtend(afterrepe);
-//
-//
-//    }
+
+
+     //   String output = x.removeWhiteCharInInvoiceAndReplaceO("CF220901571_C17-173332, C06-173269, C02- 173306_08");
+
+
+
+        int startPRV=0;
+        int endPRV=0;
+
+        for (String regex : x.regexList) {
+
+            Pattern patternPRV = Pattern.compile(regex);
+
+            Matcher matcherPRV = patternPRV.matcher("CF230200455_C01-000001");
+
+            while (matcherPRV.find()) {
+                startPRV = matcherPRV.start();
+                endPRV = matcherPRV.end();
+            }
+        }
+
+        String invoicePRV = "CF230200455_C01-000001".substring(startPRV,endPRV).trim();
+
+       System.out.println("-->"+invoicePRV);
 
 
 
 
-
-    public static void main(String args){
-
-        String messsage="BO TIKI JALUR NUGRAHA EKAKU BCA\\n" +
-                "C01-175549_50/SCBTJ-RP/OCT/22 IN99992211031655";
     }
+
+
+
+
+//
+//    public static void main(String args){
+//
+//        String messsage="BO TIKI JALUR NUGRAHA EKAKU BCA\\n" +
+//                "C01-175549_50/SCBTJ-RP/OCT/22 IN99992211031655";
+//    }
 
 
 }
