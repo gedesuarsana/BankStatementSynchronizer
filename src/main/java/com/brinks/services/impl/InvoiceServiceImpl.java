@@ -344,7 +344,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 Pattern patternPRV = Pattern.compile(regex);
 
-                Matcher matcherPRV = patternPRV.matcher("CF230200455_C01-000001");
+                Matcher matcherPRV = patternPRV.matcher(prefixStatement);
 
                 while (matcherPRV.find()) {
                     startPRV = matcherPRV.start();
