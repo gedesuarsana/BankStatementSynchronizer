@@ -39,6 +39,10 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Value("${statement.regex-extend}")
     String regexExtend;
 
+    @Value("${statement.regex-extend2}")
+    String regexExtend2;
+
+
     @Value("${statement.regex-repetition}")
     String regexRepetition;
 
@@ -65,6 +69,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         String afterRemoveWhiteSpaceAndO = removeWhiteCharInInvoiceAndReplaceO(afterRemoveEnter);
         String afterrepe = uniformFormatRegexRepetition(afterRemoveWhiteSpaceAndO);
         String afterextend = uniformFormatRegexExtend(afterrepe);
+        String afterextend2 = uniformFormatRegexExtend2(afterextend);
 
 
 
@@ -74,7 +79,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             logger.info("regex:" + regex);
             Pattern pattern = Pattern.compile(regex);
 
-            Matcher matcher = pattern.matcher(afterextend);
+            Matcher matcher = pattern.matcher(afterextend2);
 
             Set<String> invoiceName = new HashSet<>();
             while (matcher.find()) {
@@ -109,7 +114,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         Pattern commonPattern = Pattern.compile(regexCommon);
 
-        Matcher commonMatcher = commonPattern.matcher(afterextend);
+        Matcher commonMatcher = commonPattern.matcher(afterextend2);
 
         boolean commonFound = false;
         while (commonMatcher.find()) {
@@ -388,6 +393,81 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     }
 
+
+    private String uniformFormatRegexExtend2(String statement){
+
+        logger.info("regex-extend2:" + regexExtend2);
+        Pattern pattern = Pattern.compile(regexExtend2);
+
+        Matcher matcher = pattern.matcher(statement);
+
+        boolean found = false;
+        if (matcher.find()) {
+            logger.info("I found the extend2 text " + matcher.group() + " starting at index " +
+                    matcher.start() + " and ending at index " + matcher.end());
+            found = true;
+
+
+            //searching previous invoice pattern
+
+            String prefixStatement = statement.substring(0,matcher.start()+6);
+            String suffixStatement = statement.substring(matcher.end(),statement.length());
+            String token = matcher.group().substring(6);
+
+
+            logger.info("prev:"+prefixStatement);
+            logger.info("suff:"+suffixStatement);
+
+            int startPRV=0;
+            int endPRV=0;
+
+            for (String regex : regexList) {
+
+                Pattern patternPRV = Pattern.compile(regex);
+
+                Matcher matcherPRV = patternPRV.matcher(prefixStatement);
+
+                while (matcherPRV.find()) {
+                    startPRV = matcherPRV.start();
+                    endPRV = matcherPRV.end();
+                }
+            }
+
+            logger.info("startPRV:"+startPRV);
+            logger.info("endPRV:"+endPRV);
+
+            String invoicePRV = statement.substring(startPRV,endPRV).trim();
+
+            logger.info("prev-invoice:"+invoicePRV);
+
+
+            // iterate invoice until end
+
+            String invoicePRVNumberOnly = invoicePRV.replaceAll("[^0-9]", "");
+
+            String until = invoicePRVNumberOnly.substring(0,invoicePRVNumberOnly.length()-(token.length()-1))+token.substring(1);
+
+            int invoicePRVInt = Integer.parseInt(invoicePRVNumberOnly);
+            int untilInt = Integer.parseInt(until);
+
+            StringBuffer invoices = new StringBuffer();
+
+            for(int x=(invoicePRVInt+1);x<=untilInt;x++){
+                String invoice = ""+x;
+                invoices.append(" "+invoicePRV.substring(0,3)+"-"+invoice.substring(invoice.length()-6,invoice.length())+" ");
+            }
+
+            String newStatement = prefixStatement+invoices+suffixStatement;
+
+            return uniformFormatRegexExtend2(newStatement);
+        }else{
+            logger.info("after regex-extend2 new statement:" + statement);
+            return statement;
+        }
+
+
+
+    }
 
 
     private String uniformFormatRegexRepetition(String statement){

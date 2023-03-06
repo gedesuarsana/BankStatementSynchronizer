@@ -45,6 +45,7 @@ statement:
   regex-common: "[cC][0-9]{2}\\S+"
   regex-list: "[cC][0-9]{8}>>>[cC][0-9]{2}[-| ][0-9]{6}"
   regex-extend: "_[0-9]{2,6}"
+  regex-extend2: "[0-9]{6}-[0-9]{2,6}"
   regex-repetition: ",[0-9]{2,6}"
 
 app:
