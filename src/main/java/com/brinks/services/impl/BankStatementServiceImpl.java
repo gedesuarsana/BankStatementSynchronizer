@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Objects;
 
 
 @Service("BankStatementService")
@@ -26,6 +29,9 @@ public class BankStatementServiceImpl implements BankStatementService {
 
     Logger logger = LoggerFactory.getLogger(BankStatementServiceImpl.class);
 
+    private SimpleDateFormat sdf1 = new SimpleDateFormat("yyMMdd");
+    private SimpleDateFormat sdf2 =  new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+
 
     @Override
     public void processStatement(String bank, String accountNumber, BigInteger transactionFile,Field61 field61, Field86 field86) {
@@ -38,6 +44,11 @@ public class BankStatementServiceImpl implements BankStatementService {
         bankStatement.setTransaction_file_id(transactionFile);
         bankStatement.setStatement(field86.getValue());
         bankStatement.setTransaction_type(field61.getDebitCreditMark());
+        try {
+            bankStatement.setTransaction_date(Objects.nonNull(field61.getValueDate())?sdf2.format(sdf1.parse(field61.getValueDate())):null);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
         BankStatement bankStatementSaved =bankStatementRepository.save(bankStatement);
 
         logger.info("save statement:"+field86.getValue());

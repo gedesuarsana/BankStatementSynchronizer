@@ -28,18 +28,13 @@ name: test-YAML
 
 api:
   authentication:
-    url: http://10.193.110.70:6688/authenticate
-    authorization-header: 29kweu%2shdj111[)asDehac
-    vendorid: ABC
-    systemid: testar
-    entityid: ZCSDAT
-    userid: ary
+    url: https://dr.auth.brinks.co.id/v1.2/oauth/token
+    client-id: 98c9fd49-de18-491c-88c9-f800795ed058
+    client-secret: /6nW3jzFF6;Nb8.Y5m1L18pRM7iO16cIgYng
   inquiry:
-    url: http://10.193.110.70:6688/inqarinv
-  list:
-    url: http://10.193.110.70:6688/listarbat
+    url: https://api.brinks.co.id/accpac/v1.0/inqinvno
   ar:
-    url: http://10.193.110.70:6688/addarrec
+    url: https://api.brinks.co.id/accpac/v1.0/postinvno
 
 statement:
   regex-common: "[cC][0-9]{2}\\S+"
@@ -59,49 +54,3 @@ spring:
   config:
     activate:
       on-profile: prod
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: cc
-    url: jdbc:postgresql://localhost:5432/BankStatementSynchronizerDB
-    platform: postgres
-    initialization-mode: always
-    continue-on-error: true
-  jpa:
-    show-sql: true
-    generate-ddl: true
-    hibernate:
-      ddl-auto: create
-    database: postgresql
-
-ftp:
-  host: localhost
-  port: 21
-  username: gede
-  password: gede
-
-name: prod-YAML
-
-api:
-  authentication:
-    url: http://10.193.110.70:6688/authenticate
-    authorization-header: 29kweu%2shdj111[)asDehac
-    vendorid: ABC
-    systemid: testar
-    entityid: ZCSDAT
-    userid: ary
-  inquiry:
-    url: http://10.193.110.70:6688/inqarinv
-  list:
-    url: http://10.193.110.70:6688/listarbat
-  ar:
-    url: http://10.193.110.70:6688/addarrec
-
-
-statement:
-  regex-common: "[cC][0-9]{2}\\S+"
-  regex-list: "[cC][0-9]{8,10}>>>[cC][0-9]{2}[-| ][0-9]{6,8}>>>[cC][oO][0-9][-| ][0-9]"
-
-app:
-  tax-percentage: 20
-

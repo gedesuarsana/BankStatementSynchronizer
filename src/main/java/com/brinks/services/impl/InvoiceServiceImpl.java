@@ -8,6 +8,7 @@ import com.brinks.repository.InvoiceStatusRepository;
 import com.brinks.services.BrinksAPIService;
 import com.brinks.services.InvoiceService;
 import com.brinks.services.request.ARRequest;
+import com.brinks.services.request.ARRequestDetail;
 import com.brinks.services.request.InquiryRequest;
 import com.brinks.services.response.ARResponse;
 import com.brinks.services.response.AuthenticationResponse;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -173,7 +175,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         AuthenticationResponse authenticationResponse = brinksAPIService.authenticate();
 
-        if (!Objects.isNull(authenticationResponse.getToken())) {
+        if (!Objects.isNull(authenticationResponse.getAccess_token())) {
 
             for (InvoiceStatus invoiceStatus : invoiceStatusList) {
 
@@ -194,39 +196,45 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 InquiryRequest inquiryRequest = new InquiryRequest();
 
-                //todo where got the value for custnum
-                inquiryRequest.setCustnum("?");
 
-                inquiryRequest.setDocnum(invoiceStatus.getInvoice_name());
+
+                inquiryRequest.setInvoice_no(invoiceStatus.getInvoice_name());
 
                 InquiryResponse inquiryResponse = null;
 
 
                 try {
-                    inquiryResponse = brinksAPIService.inquiry(authenticationResponse.getToken(), inquiryRequest);
+                    inquiryResponse = brinksAPIService.inquiry(authenticationResponse.getAccess_token(), inquiryRequest);
 
                     //save the response amount
 
-                    invoiceStatus.setInquiry_amount(new BigDecimal(inquiryResponse.getAmt()));
+
+
+                    invoiceStatus.setInquiry_amount( inquiryResponse.getBody().getTotal_payment());
 
 
 
-                } catch (Exception e) {
+                }catch (HttpClientErrorException hcee){
 
-                        invoiceStatus.setInquiry_status("ERROR");
+                   String message= hcee.getMessage();
+                    hcee.printStackTrace();
+                    logger.error("error:" + hcee.getMessage());
+                }catch (Exception e) {
 
+                    invoiceStatus.setInquiry_status("ERROR");
                     e.printStackTrace();
                     logger.error("error:" + e.getMessage());
                 }
 
-                if (Objects.nonNull(inquiryResponse) && inquiryResponse.getResponseCode() == "0") {
+                if (Objects.nonNull(inquiryResponse) && "20001".equalsIgnoreCase(inquiryResponse.getResponse_code())) {
 
                         invoiceStatus.setInquiry_status("COMPLETED");
 
                 } else {
 
-                        invoiceStatus.setInquiry_status("ERROR");
-
+                        invoiceStatus.setInquiry_status("NOT FOUND");
+                        invoiceStatusRepository.save(invoiceStatus);
+                        continue;
                 }
 
 
@@ -246,28 +254,42 @@ public class InvoiceServiceImpl implements InvoiceService {
                     bankAmount = bankStatement.getAmount().add(totalPreviouslyAmount);
                 }
 
-                BigDecimal apiAmount = new BigDecimal(inquiryResponse.getAmt());
+                BigDecimal apiAmount = inquiryResponse.getBody().getTotal_payment();
                 BigDecimal apiAmountBeforeTax = apiAmount.divide(new BigDecimal(100).subtract(tax)).multiply(new BigDecimal(100));
 
 
                 //set remaining amount
                 invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmountBeforeTax));
 
-                if (bankAmount.subtract(apiAmountBeforeTax).compareTo(new BigDecimal(0)) >= 0) {
+                Boolean isLastInvoice =   invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()+1)==null;
+
+
+                if (bankAmount.subtract(apiAmountBeforeTax).compareTo(new BigDecimal(0)) >= 0 && !isLastInvoice ) {
 
 
                         invoiceStatus.setStatus("COMPLETED");
 
                     // call AR
 
-
                     ARResponse arResponse = null;
                     try {
                         ARRequest arRequest = new ARRequest();
-                        //todo fullfill the parameter
+
+                        arRequest.setTrx_bank_code(bankStatement.getBank());
+
+                        arRequest.setTrx_date(bankStatement.getTransaction_date());
 
 
-                        arResponse = brinksAPIService.ar(authenticationResponse.getToken(), arRequest);
+                        arRequest.setTrx_no_ref(""+invoiceStatus.getId());
+                        List<ARRequestDetail> arRequestDetails = new ArrayList<>();
+                        ARRequestDetail item = new ARRequestDetail();
+                        item.setAmt(apiAmount);
+                        item.setInvoice_no(invoiceStatus.getInvoice_name());
+                        item.setTrx_status("paid");
+                        arRequestDetails.add(item);
+                        arRequest.setTrx_details(arRequestDetails);
+
+                        arResponse = brinksAPIService.ar(authenticationResponse.getAccess_token(), arRequest);
 
                     } catch (Exception e) {
 
@@ -277,7 +299,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         logger.error("error:" + e.getMessage());
                     }
 
-                    if (Objects.nonNull(arResponse) && arResponse.getResponseCode() == "0") {
+                    if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
 
                             invoiceStatus.setAr_status("COMPLETED");
 
@@ -291,7 +313,49 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 } else {
 
-                        invoiceStatus.setStatus("PENDING");
+                    invoiceStatus.setStatus("PENDING");
+
+                    // call AR
+
+                    ARResponse arResponse = null;
+                    try {
+                        ARRequest arRequest = new ARRequest();
+
+                        arRequest.setTrx_bank_code(bankStatement.getBank());
+
+                        arRequest.setTrx_date(bankStatement.getTransaction_date());
+
+
+                        arRequest.setTrx_no_ref(""+invoiceStatus.getId());
+                        List<ARRequestDetail> arRequestDetails = new ArrayList<>();
+                        ARRequestDetail item = new ARRequestDetail();
+                        item.setAmt(bankAmount);
+
+                        item.setInvoice_no(invoiceStatus.getInvoice_name());
+                        item.setTrx_status("unsettled");
+                        arRequestDetails.add(item);
+                        arRequest.setTrx_details(arRequestDetails);
+
+                        arResponse = brinksAPIService.ar(authenticationResponse.getAccess_token(), arRequest);
+
+                    } catch (Exception e) {
+
+                        invoiceStatus.setAr_status("ERROR");
+
+                        e.printStackTrace();
+                        logger.error("error:" + e.getMessage());
+                    }
+
+                    if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
+
+                        invoiceStatus.setAr_status("COMPLETED");
+
+                    }else{
+                        logger.error("error: responseCode:"+arResponse);
+
+                        invoiceStatus.setAr_status("ERROR");
+
+                    }
 
                 }
 

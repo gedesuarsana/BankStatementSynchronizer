@@ -21,6 +21,20 @@ public class BankStatement {
 
     private String transaction_type;
 
+    private String transaction_date;
+
+    public BigInteger getTransaction_file_id() {
+        return transaction_file_id;
+    }
+
+    public String getTransaction_date() {
+        return transaction_date;
+    }
+
+    public void setTransaction_date(String transaction_date) {
+        this.transaction_date = transaction_date;
+    }
+
     private BigDecimal amount;
 
     private String statement;

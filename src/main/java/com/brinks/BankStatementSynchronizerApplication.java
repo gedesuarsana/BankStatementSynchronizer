@@ -48,12 +48,12 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
 
     public void run(String... args) throws Exception {
 
-        String bank = args[0];
+        String bankCode = args[0];
 
         String pathFile = args[1];
 
 
-        logger.info("Program Starting!!! with bank:" + bank + " filePath:" + pathFile);
+        logger.info("Program Starting!!! with bank:" + bankCode + " filePath:" + pathFile);
         Transaction transaction = new Transaction();
         transaction.setFile_name(pathFile);
         transaction.setStatus("START");
@@ -80,7 +80,7 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
             List<Field86> field86List = mt940.getField86();
 
             for (int y = 0; y < field61List.size(); y++) {
-                bankStatementService.processStatement(bank, accountNumber, transactionsaved.getId(), field61List.get(y), field86List.get(y));
+                bankStatementService.processStatement(bankCode, accountNumber, transactionsaved.getId(), field61List.get(y), field86List.get(y));
             }
         }
 

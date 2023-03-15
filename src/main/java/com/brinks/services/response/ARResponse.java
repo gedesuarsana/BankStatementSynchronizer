@@ -2,23 +2,23 @@ package com.brinks.services.response;
 
 public class ARResponse {
 
-    private String responseCode;
+    private String response_code;
 
-    private String responseMsg;
+    private String response_message;
 
-    public String getResponseCode() {
-        return responseCode;
+    public String getResponse_code() {
+        return response_code;
     }
 
-    public void setResponseCode(String responseCode) {
-        this.responseCode = responseCode;
+    public void setResponse_code(String response_code) {
+        this.response_code = response_code;
     }
 
-    public String getResponseMsg() {
-        return responseMsg;
+    public String getResponse_message() {
+        return response_message;
     }
 
-    public void setResponseMsg(String responseMsg) {
-        this.responseMsg = responseMsg;
+    public void setResponse_message(String response_message) {
+        this.response_message = response_message;
     }
 }
