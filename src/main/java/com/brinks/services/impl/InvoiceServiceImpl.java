@@ -13,6 +13,7 @@ import com.brinks.services.request.InquiryRequest;
 import com.brinks.services.response.ARResponse;
 import com.brinks.services.response.AuthenticationResponse;
 import com.brinks.services.response.InquiryResponse;
+import com.brinks.utils.InvoiceComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +84,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
             Matcher matcher = pattern.matcher(afterextend2);
 
-            Set<String> invoiceName = new HashSet<>();
+            Set<String> invoiceName = new TreeSet<String>();
             while (matcher.find()) {
                 logger.info("I found the text " + matcher.group() + " starting at index " +
                         matcher.start() + " and ending at index " + matcher.end());
@@ -144,25 +145,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
 
-//    public Map<String, BigDecimal> getAccumulatedInvoice() {
-//        Map<String, BigDecimal> result = new HashMap<String, BigDecimal>();
-//
-//        List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByStatus("INCOMPLETE");
-//
-//        for (InvoiceStatus item : invoiceStatusList) {
-//            BankStatement bankStatement = bankStatementRepository.findById(item.getBank_statement_id()).get();
-//
-//
-//            if (result.get(item.getInvoice_name()) == null) {
-//                result.put(item.getInvoice_name(), bankStatement.getAmount());
-//            } else {
-//                BigDecimal amount = result.get(item.getInvoice_name());
-//                BigDecimal newAmount = amount.add(bankStatement.getAmount());
-//                result.put(item.getInvoice_name(), newAmount);
-//            }
-//        }
-//        return result;
-//    }
+
 
 
     public void processInvoice() {
@@ -631,58 +614,70 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
 
+//    public static void main(String args[]){
+//
+//       InvoiceServiceImpl x = new InvoiceServiceImpl();
+//       x.regexExtend ="_[0-9]{2}";
+//       x.regexRepetition=",[0-9]{2}";
+//       x.regexList = new ArrayList<>();
+//       x.regexList.add("[cC][0-9]{8}");
+//       x.regexList.add("[cC][0-9]{2}[-| ][0-9]{6}");
+//
+//
+//
+////        String afterrepe = x.uniformFormatRegexRepetition("CF220901571_C17-173332, C06-173269, C02- 173306_08");
+////        String output = x.uniformFormatRegexExtend(afterrepe);
+//
+//
+//     //   String output = x.removeWhiteCharInInvoiceAndReplaceO("CF220901571_C17-173332, C06-173269, C02- 173306_08");
+//
+//
+//
+//        int startPRV=0;
+//        int endPRV=0;
+//
+//        for (String regex : x.regexList) {
+//
+//            Pattern patternPRV = Pattern.compile(regex);
+//
+//            Matcher matcherPRV = patternPRV.matcher("CF230200455_C01-000001");
+//
+//            while (matcherPRV.find()) {
+//                startPRV = matcherPRV.start();
+//                endPRV = matcherPRV.end();
+//            }
+//        }
+//
+//        String invoicePRV = "CF230200455_C01-000001".substring(startPRV,endPRV).trim();
+//
+//       System.out.println("-->"+invoicePRV);
+//
+//
+//
+//
+//    }
+
+
+
+
+
     public static void main(String args[]){
 
-       InvoiceServiceImpl x = new InvoiceServiceImpl();
-       x.regexExtend ="_[0-9]{2}";
-       x.regexRepetition=",[0-9]{2}";
-       x.regexList = new ArrayList<>();
-       x.regexList.add("[cC][0-9]{8}");
-       x.regexList.add("[cC][0-9]{2}[-| ][0-9]{6}");
+       // Set<String> invoiceName = new TreeSet<>(new InvoiceComparator());
+
+        Set<String> invoiceName = new TreeSet<>();
 
 
+        invoiceName.add("c01-000001");
+        invoiceName.add("c02-000001");
+        invoiceName.add("c01-000004");
+        invoiceName.add("c01-000003");
 
-//        String afterrepe = x.uniformFormatRegexRepetition("CF220901571_C17-173332, C06-173269, C02- 173306_08");
-//        String output = x.uniformFormatRegexExtend(afterrepe);
-
-
-     //   String output = x.removeWhiteCharInInvoiceAndReplaceO("CF220901571_C17-173332, C06-173269, C02- 173306_08");
-
-
-
-        int startPRV=0;
-        int endPRV=0;
-
-        for (String regex : x.regexList) {
-
-            Pattern patternPRV = Pattern.compile(regex);
-
-            Matcher matcherPRV = patternPRV.matcher("CF230200455_C01-000001");
-
-            while (matcherPRV.find()) {
-                startPRV = matcherPRV.start();
-                endPRV = matcherPRV.end();
-            }
+        for(String x: invoiceName){
+            System.out.println(x);
         }
 
-        String invoicePRV = "CF230200455_C01-000001".substring(startPRV,endPRV).trim();
-
-       System.out.println("-->"+invoicePRV);
-
-
-
-
     }
-
-
-
-
-//
-//    public static void main(String args){
-//
-//        String messsage="BO TIKI JALUR NUGRAHA EKAKU BCA\\n" +
-//                "C01-175549_50/SCBTJ-RP/OCT/22 IN99992211031655";
-//    }
 
 
 }
