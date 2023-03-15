@@ -238,16 +238,16 @@ public class InvoiceServiceImpl implements InvoiceService {
                 }
 
                 BigDecimal apiAmount = inquiryResponse.getBody().getTotal_payment();
-                BigDecimal apiAmountBeforeTax = apiAmount.divide(new BigDecimal(100).subtract(tax)).multiply(new BigDecimal(100));
+                BigDecimal apiAmountAfterTax = apiAmount.divide(new BigDecimal(100)).multiply(new BigDecimal(100).add(tax));
 
 
                 //set remaining amount
-                invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmountBeforeTax));
+                invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmountAfterTax));
 
                 Boolean isLastInvoice =   invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()+1)==null;
 
 
-                if (bankAmount.subtract(apiAmountBeforeTax).compareTo(new BigDecimal(0)) >= 0 && !isLastInvoice ) {
+                if (bankAmount.subtract(apiAmountAfterTax).compareTo(new BigDecimal(0)) >= 0 && !isLastInvoice ) {
 
 
                         invoiceStatus.setStatus("COMPLETED");
