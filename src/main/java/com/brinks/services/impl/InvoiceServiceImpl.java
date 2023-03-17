@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -160,6 +161,11 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         if (!Objects.isNull(authenticationResponse.getAccess_token())) {
 
+
+            Map<BigInteger,List<InvoiceStatus>> statementInvoiceStatusMap = new HashMap<>();
+
+
+
             for (InvoiceStatus invoiceStatus : invoiceStatusList) {
 
                 // List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByInvoiceName(invoiceName);
@@ -238,113 +244,161 @@ public class InvoiceServiceImpl implements InvoiceService {
                 }
 
                 BigDecimal apiAmount = inquiryResponse.getBody().getTotal_payment();
-                BigDecimal apiAmountAfterTax = apiAmount.divide(new BigDecimal(100)).multiply(new BigDecimal(100).add(tax));
+               // BigDecimal apiAmountAfterTax = apiAmount.divide(new BigDecimal(100)).multiply(new BigDecimal(100).add(tax));
 
 
                 //set remaining amount
-                invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmountAfterTax));
-
-                Boolean isLastInvoice =   invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()+1)==null;
+                invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmount));
 
 
-                if (bankAmount.subtract(apiAmountAfterTax).compareTo(new BigDecimal(0)) >= 0 && !isLastInvoice ) {
+
+                Boolean hasNextInvoice = invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()+1)!=null;
+
+                if(hasNextInvoice) {
+                    List<InvoiceStatus> invoiceStatusListBasedOnStatement = statementInvoiceStatusMap.get(invoiceStatus.getBank_statement_id());
+
+                    if (Objects.isNull(invoiceStatusListBasedOnStatement)) {
+                        invoiceStatusListBasedOnStatement = new ArrayList<>();
+                        invoiceStatusListBasedOnStatement.add(invoiceStatus);
+                    }else{
+                        invoiceStatusListBasedOnStatement.add(invoiceStatus);
+                    }
+                    //skip send into the ar when it multi invoice in one statement
+                continue;
+                }else{
+                    Boolean hasPrevInvoice = invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()-1)!=null;
+                    if(hasPrevInvoice){
+                        // treat for multi invoice in one statement
+
+                        List<InvoiceStatus> allMultiInvoice=   statementInvoiceStatusMap.get(invoiceStatus.getBank_statement_id());
+                        allMultiInvoice.add(invoiceStatus);
 
 
-                        invoiceStatus.setStatus("COMPLETED");
+                        // call AR multi
 
-                    // call AR
+                        ARResponse arResponse = null;
+                        try {
+                            ARRequest arRequest = new ARRequest();
 
-                    ARResponse arResponse = null;
-                    try {
-                        ARRequest arRequest = new ARRequest();
+                            arRequest.setTrx_bank_code(bankStatement.getBank());
 
-                        arRequest.setTrx_bank_code(bankStatement.getBank());
-
-                        arRequest.setTrx_date(bankStatement.getTransaction_date());
+                            arRequest.setTrx_date(bankStatement.getTransaction_date());
 
 
-                        arRequest.setTrx_no_ref(""+invoiceStatus.getId());
-                        List<ARRequestDetail> arRequestDetails = new ArrayList<>();
-                        ARRequestDetail item = new ARRequestDetail();
-                        item.setAmt(apiAmount);
-                        item.setInvoice_no(invoiceStatus.getInvoice_name());
-                        item.setTrx_status("paid");
-                        arRequestDetails.add(item);
-                        arRequest.setTrx_details(arRequestDetails);
+                            arRequest.setTrx_no_ref(""+invoiceStatus.getId());
 
-                        arResponse = brinksAPIService.ar(authenticationResponse.getAccess_token(), arRequest);
 
-                    } catch (Exception e) {
+
+                            List<ARRequestDetail> arRequestDetails = new ArrayList<>();
+
+
+                            for(InvoiceStatus invoiceStatusItem:allMultiInvoice) {
+
+                                ARRequestDetail item = new ARRequestDetail();
+
+                               if( invoiceStatusItem.getRemaining_amount().compareTo(new BigDecimal(0))>=0){
+                                   invoiceStatusItem.setStatus("COMPLETED");
+                                   item.setAmt(invoiceStatusItem.getInquiry_amount());
+                               }else{
+                                   invoiceStatusItem.setStatus("PENDING");
+                                   item.setAmt(invoiceStatusItem.getRemaining_amount());
+                               }
+
+
+                                item.setInvoice_no(invoiceStatusItem.getInvoice_name());
+                                item.setTrx_status("COMPLETED".equalsIgnoreCase(invoiceStatusItem.getStatus()) ? "paid" : "unsettled");
+
+
+                                arRequestDetails.add(item);
+                                invoiceStatusRepository.save(invoiceStatusItem);
+
+                            }
+
+                            arRequest.setTrx_details(arRequestDetails);
+
+                            arResponse = brinksAPIService.ar(authenticationResponse.getAccess_token(), arRequest);
+
+                        } catch (Exception e) {
 
                             invoiceStatus.setAr_status("ERROR");
 
-                        e.printStackTrace();
-                        logger.error("error:" + e.getMessage());
-                    }
+                            e.printStackTrace();
+                            logger.error("error:" + e.getMessage());
+                        }
 
-                    if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
+                        if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
 
                             invoiceStatus.setAr_status("COMPLETED");
 
-                    }else{
-                        logger.error("error: responseCode:"+arResponse);
+                        }else{
+                            logger.error("error: responseCode:"+arResponse);
 
                             invoiceStatus.setAr_status("ERROR");
 
-                    }
+                        }
 
 
-                } else {
-
-                    invoiceStatus.setStatus("PENDING");
-
-                    // call AR
-
-                    ARResponse arResponse = null;
-                    try {
-                        ARRequest arRequest = new ARRequest();
-
-                        arRequest.setTrx_bank_code(bankStatement.getBank());
-
-                        arRequest.setTrx_date(bankStatement.getTransaction_date());
 
 
-                        arRequest.setTrx_no_ref(""+invoiceStatus.getId());
-                        List<ARRequestDetail> arRequestDetails = new ArrayList<>();
-                        ARRequestDetail item = new ARRequestDetail();
-                        item.setAmt(bankAmount);
-
-                        item.setInvoice_no(invoiceStatus.getInvoice_name());
-                        item.setTrx_status("unsettled");
-                        arRequestDetails.add(item);
-                        arRequest.setTrx_details(arRequestDetails);
-
-                        arResponse = brinksAPIService.ar(authenticationResponse.getAccess_token(), arRequest);
-
-                    } catch (Exception e) {
-
-                        invoiceStatus.setAr_status("ERROR");
-
-                        e.printStackTrace();
-                        logger.error("error:" + e.getMessage());
-                    }
-
-                    if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
-
-                        invoiceStatus.setAr_status("COMPLETED");
 
                     }else{
-                        logger.error("error: responseCode:"+arResponse);
+                        // treat for single invoice in one statement;
 
-                        invoiceStatus.setAr_status("ERROR");
 
+                        if(bankAmount.subtract(apiAmount).compareTo(new BigDecimal(0)) == 0 ){
+                            invoiceStatus.setStatus("COMPLETED");
+                        }else{
+                            invoiceStatus.setStatus("PENDING");
+                        }
+
+                        // call AR
+
+                        ARResponse arResponse = null;
+                        try {
+                            ARRequest arRequest = new ARRequest();
+
+                            arRequest.setTrx_bank_code(bankStatement.getBank());
+
+                            arRequest.setTrx_date(bankStatement.getTransaction_date());
+
+
+                            arRequest.setTrx_no_ref(""+invoiceStatus.getId());
+                            List<ARRequestDetail> arRequestDetails = new ArrayList<>();
+                            ARRequestDetail item = new ARRequestDetail();
+                            item.setAmt(apiAmount);
+                            item.setInvoice_no(invoiceStatus.getInvoice_name());
+                            item.setTrx_status("COMPLETED".equalsIgnoreCase(invoiceStatus.getStatus())?"paid":"unsettled");
+                            arRequestDetails.add(item);
+                            arRequest.setTrx_details(arRequestDetails);
+
+                            arResponse = brinksAPIService.ar(authenticationResponse.getAccess_token(), arRequest);
+
+                        } catch (Exception e) {
+
+                            invoiceStatus.setAr_status("ERROR");
+
+                            e.printStackTrace();
+                            logger.error("error:" + e.getMessage());
+                        }
+
+                        if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
+
+                            invoiceStatus.setAr_status("COMPLETED");
+
+                        }else{
+                            logger.error("error: responseCode:"+arResponse);
+
+                            invoiceStatus.setAr_status("ERROR");
+
+                        }
+
+                        invoiceStatusRepository.save(invoiceStatus);
+
+
+                        //end call single item
                     }
-
                 }
 
-
-                // save all status
-                invoiceStatusRepository.save(invoiceStatus);
 
             }
         }
