@@ -260,10 +260,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                     if (Objects.isNull(invoiceStatusListBasedOnStatement)) {
                         invoiceStatusListBasedOnStatement = new ArrayList<>();
                         invoiceStatusListBasedOnStatement.add(invoiceStatus);
+                        statementInvoiceStatusMap.put(invoiceStatus.getBank_statement_id(),invoiceStatusListBasedOnStatement);
                     }else{
                         invoiceStatusListBasedOnStatement.add(invoiceStatus);
                     }
                     //skip send into the ar when it multi invoice in one statement
+                    invoiceStatusRepository.save(invoiceStatus);
                 continue;
                 }else{
                     Boolean hasPrevInvoice = invoiceStatusRepository.findByBankStatementIdAndIndexInStatement(invoiceStatus.getBank_statement_id(),invoiceStatus.getIndex_in_statement()-1)!=null;
@@ -291,17 +293,25 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                             List<ARRequestDetail> arRequestDetails = new ArrayList<>();
 
-
+                            BigDecimal prevAmount = new BigDecimal(0);
+                             int index=0;
                             for(InvoiceStatus invoiceStatusItem:allMultiInvoice) {
+
+                                boolean isLastInvoice = index == (allMultiInvoice.size() -1)?true:false;
 
                                 ARRequestDetail item = new ARRequestDetail();
 
-                               if( invoiceStatusItem.getRemaining_amount().compareTo(new BigDecimal(0))>=0){
+                               if( invoiceStatusItem.getRemaining_amount().compareTo(new BigDecimal(0))>=0 && !isLastInvoice){
                                    invoiceStatusItem.setStatus("COMPLETED");
                                    item.setAmt(invoiceStatusItem.getInquiry_amount());
-                               }else{
-                                   invoiceStatusItem.setStatus("PENDING");
-                                   item.setAmt(invoiceStatusItem.getRemaining_amount());
+                               } else{
+
+                                   if( invoiceStatusItem.getRemaining_amount().compareTo(new BigDecimal(0))==0){
+                                       invoiceStatusItem.setStatus("COMPLETED");
+                                   }else{
+                                       invoiceStatusItem.setStatus("PENDING");
+                                   }
+                                   item.setAmt(prevAmount);
                                }
 
 
@@ -311,7 +321,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                                 arRequestDetails.add(item);
                                 invoiceStatusRepository.save(invoiceStatusItem);
-
+                                prevAmount =invoiceStatusItem.getRemaining_amount().compareTo(new BigDecimal(0))>=0?invoiceStatusItem.getRemaining_amount():new BigDecimal(0);
+                              index++;
                             }
 
                             arRequest.setTrx_details(arRequestDetails);
@@ -320,7 +331,10 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                         } catch (Exception e) {
 
-                            invoiceStatus.setAr_status("ERROR");
+                            for(InvoiceStatus invoiceStatusItem:allMultiInvoice) {
+                                invoiceStatusItem.setAr_status("ERROR");
+                                invoiceStatusRepository.save(invoiceStatusItem);
+                            }
 
                             e.printStackTrace();
                             logger.error("error:" + e.getMessage());
@@ -328,12 +342,18 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                         if (Objects.nonNull(arResponse) && "20001".equalsIgnoreCase(arResponse.getResponse_code())) {
 
-                            invoiceStatus.setAr_status("COMPLETED");
+                            for(InvoiceStatus invoiceStatusItem:allMultiInvoice) {
+                                invoiceStatusItem.setAr_status("COMPLETED");
+                                invoiceStatusRepository.save(invoiceStatusItem);
+                            }
 
                         }else{
                             logger.error("error: responseCode:"+arResponse);
 
-                            invoiceStatus.setAr_status("ERROR");
+                            for(InvoiceStatus invoiceStatusItem:allMultiInvoice) {
+                                invoiceStatusItem.setAr_status("ERROR");
+                                invoiceStatusRepository.save(invoiceStatusItem);
+                            }
 
                         }
 
@@ -365,7 +385,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                             arRequest.setTrx_no_ref(""+invoiceStatus.getId());
                             List<ARRequestDetail> arRequestDetails = new ArrayList<>();
                             ARRequestDetail item = new ARRequestDetail();
-                            item.setAmt(apiAmount);
+                            item.setAmt(bankAmount);
                             item.setInvoice_no(invoiceStatus.getInvoice_name());
                             item.setTrx_status("COMPLETED".equalsIgnoreCase(invoiceStatus.getStatus())?"paid":"unsettled");
                             arRequestDetails.add(item);
