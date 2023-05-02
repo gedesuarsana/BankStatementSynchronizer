@@ -1,0 +1,73 @@
+version: '3.7'
+services:
+  synchservice:
+    image: my-synch-service:latest
+    container_name: my-synch-service-container
+    volumes:
+      - ./logs:/logs
+    environment:
+      - JAVA_TOOL_OPTIONS=
+        -Dusername=${DB_USER}
+        -Djdbcurl=${DB_URL_SPRING}
+        -Dpassword=${DB_PW}
+        -Dspring.profiles.active=dev
+        -Dbankcode=${BANK_CODE}
+        -Dfolderpath=${FOLDER_PATH}
+        -Dftphost=${FTP_HOST}
+        -Dftpport=${FTP_PORT}
+        -Dftpusername=${FTP_USERNAME}
+        -Dftppassword=${FTP_PASSWORD}
+      - CATALINA_OPTS=
+        -Xmx4096m 
+        -Xms1024m 
+      - TZ=Asia/Jakarta      
+    build: .
+    ports:
+      - 1002:1002
+    depends_on:
+      - postgres14
+      - ftp-server
+    networks:
+      - app-network
+      
+  postgres14:
+    image: my-postgres-db:latest
+    container_name: my-postgres-db-container
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:  
+      - POSTGRES_USER=${DB_USER}    
+      - POSTGRES_PASSWORD=${DB_PW}
+      - TZ=Asia/Jakarta 
+    command: --max_connections=500
+    ports:
+      - 5432:5432
+    networks:
+      - app-network
+      
+  ftp-server:
+    image: stilliard/pure-ftpd
+    container_name: my-ftp-server
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    volumes:
+      - "/ftpfile:/home/gede/"
+      - "/ftppassword:/etc/pure-ftpd/passwd"
+    environment:
+      PUBLICHOST: "localhost"
+      FTP_USER_NAME: ${FTP_USERNAME}
+      FTP_USER_PASS: ${FTP_PASSWORD}
+      FTP_USER_HOME: /home/gede
+      ADDED_FLAGS: "--verboselog"
+    networks:
+      - app-network
+        
+         
+volumes:
+  db-data:
+networks:
+  app-network:
+
+  
