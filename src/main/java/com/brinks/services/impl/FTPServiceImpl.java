@@ -1,6 +1,7 @@
 package com.brinks.services.impl;
 
 import com.brinks.services.FTPService;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +30,7 @@ public class FTPServiceImpl implements FTPService {
         FTPClient ftpClient = new FTPClient();
         ftpClient.connect(host, port);
         ftpClient.login(username, password);
+        System.out.println("FTP Connect to host:"+host+" port:"+port+" username:"+username+" password:"+password);
         return ftpClient;
     }
     @Override
@@ -54,12 +56,36 @@ public class FTPServiceImpl implements FTPService {
     }
     @Override
     public byte[] downloadFile(String path, FTPClient ftpClient) throws Exception {
+        FTPFile firstFileToDownload=null;
+
+
+       for(FTPFile ftpFile: ftpClient.listFiles(path)){
+           System.out.println("ftp item:"+ftpFile.getName());
+           if(ftpFile.isFile()){
+               firstFileToDownload=ftpFile;
+               break;
+           }
+       }
+
+        String fullPath = path+"/"+firstFileToDownload.getName();
+
+
+        //ftpClient.enterLocalPassiveMode();
+        // ftpClient.doCommand("CWD","/");
+       // ftpClient.doCommand("TYPE","A");
+       // ftpClient.doCommand("EPSV",null);
+
+
+
+
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         System.out.println();
         System.out.printf("[downloadFile][%d] Is success to download file : %s -> %b",
-                System.currentTimeMillis(), path, ftpClient.retrieveFile(path, byteArrayOutputStream));
+                System.currentTimeMillis(), fullPath, ftpClient.retrieveFile(fullPath, byteArrayOutputStream));
         System.out.println();
+
         return byteArrayOutputStream.toByteArray();
+
     }
 
 

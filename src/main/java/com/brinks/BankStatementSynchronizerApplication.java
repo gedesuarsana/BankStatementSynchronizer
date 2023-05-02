@@ -25,8 +25,12 @@ import java.util.List;
 @SpringBootApplication
 public class BankStatementSynchronizerApplication implements CommandLineRunner {
 
-    @Value("${name}")
-    private String name;
+    @Value("${bankCode}")
+    private String bankCode;
+
+    @Value("${folderPath}")
+    private String folderPath;
+
 
     @Autowired
     FTPService ftpService;
@@ -48,21 +52,24 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
 
     public void run(String... args) throws Exception {
 
-        String bankCode = args[0];
-
-        String pathFile = args[1];
 
 
-        logger.info("Program Starting!!! with bank:" + bankCode + " filePath:" + pathFile);
+        logger.info("Program Starting!!! with bank:" + bankCode + " folderPath:" + folderPath);
         Transaction transaction = new Transaction();
-        transaction.setFile_name(pathFile);
+        transaction.setFile_name(folderPath);
         transaction.setStatus("START");
         transaction.setStart_time(new Timestamp(System.currentTimeMillis()));
         Transaction transactionsaved = transactionRepository.save(transaction);
 
         FTPClient ftpClient = ftpService.loginFtp();
 
-        byte[] fileContent = ftpService.downloadFile(pathFile, ftpClient);
+        byte[] fileContent = ftpService.downloadFile(folderPath, ftpClient);
+        if(fileContent ==null){
+            logger.info("nothing to download!");
+            return;
+        }else{
+            logger.info("there is a file to donwload size:"+fileContent.length);
+        }
 
         String content = new String(fileContent);
 

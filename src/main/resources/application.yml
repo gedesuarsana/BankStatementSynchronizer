@@ -4,24 +4,24 @@ spring:
       on-profile: dev
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: postgres
-    url: jdbc:postgresql://localhost:5432/BankStatementSynchronizerDB
+    username: ${username}
+    password: ${password}
+    url: ${jdbcurl}
     platform: postgres
     initialization-mode: always
     continue-on-error: true
   jpa:
     show-sql: true
-    generate-ddl: true
+    generate-ddl: false
     hibernate:
       ddl-auto: none
     database: postgresql
 
 ftp:
-  host: localhost
-  port: 21
-  username: gede
-  password: gede
+  host: ${ftphost}
+  port: ${ftpport}
+  username: ${ftpusername}
+  password: ${ftppassword}
 
 name: test-YAML
 
@@ -45,6 +45,10 @@ statement:
 
 app:
   tax-percentage: 9
+
+bankCode: ${bankcode}
+
+folderPath: ${folderpath}
 
 
 
