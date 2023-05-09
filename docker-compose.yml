@@ -30,6 +30,29 @@ services:
       - ftp-server
     networks:
       - app-network
+  
+  synchportalservice:
+    image: my-synch-portal-service:latest
+    container_name: my-synch-portal-service-container
+    volumes:
+      - ./logs:/logs
+    environment:
+      - JAVA_TOOL_OPTIONS=
+        -Dusername=${DB_USER}
+        -Djdbcurl=${DB_URL_SPRING}
+        -Dpassword=${DB_PW}
+        -Dspring.profiles.active=dev
+      - CATALINA_OPTS=
+        -Xmx4096m 
+        -Xms1024m 
+      - TZ=Asia/Jakarta      
+    build: .
+    ports:
+      - 8080:8080
+    depends_on:
+      - synchservice
+    networks:
+      - app-network
       
   postgres14:
     image: my-postgres-db:latest
