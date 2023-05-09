@@ -17,6 +17,7 @@ services:
         -Dftpport=${FTP_PORT}
         -Dftpusername=${FTP_USERNAME}
         -Dftppassword=${FTP_PASSWORD}
+        -Dcron="${CRON}"
       - CATALINA_OPTS=
         -Xmx4096m 
         -Xms1024m 

@@ -50,6 +50,8 @@ bankCode: ${bankcode}
 
 folderPath: ${folderpath}
 
+cron: ${cron}
+
 
 
 

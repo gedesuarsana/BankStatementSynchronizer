@@ -17,12 +17,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.sql.Timestamp;
 import java.util.List;
 
 
 @SpringBootApplication
+@EnableScheduling
 public class BankStatementSynchronizerApplication implements CommandLineRunner {
 
     @Value("${bankCode}")
@@ -52,8 +55,10 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
 
     public void run(String... args) throws Exception {
 
+    }
 
-
+    @Scheduled(cron = "${cron}")
+    public void doSynch()  throws Exception{
         logger.info("Program Starting!!! with bank:" + bankCode + " folderPath:" + folderPath);
         Transaction transaction = new Transaction();
         transaction.setFile_name(folderPath);
@@ -99,6 +104,8 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
         transactionsaved.setEnd_time(new Timestamp(System.currentTimeMillis()));
         transactionRepository.save(transactionsaved);
         logger.info("Program End!!!");
+
+
 
     }
 
