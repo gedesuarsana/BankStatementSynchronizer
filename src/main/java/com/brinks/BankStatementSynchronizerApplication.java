@@ -61,20 +61,22 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
     public void doSynch()  throws Exception{
         logger.info("Program Starting!!! with bank:" + bankCode + " folderPath:" + folderPath);
         Transaction transaction = new Transaction();
-        transaction.setFile_name(folderPath);
         transaction.setStatus("START");
         transaction.setStart_time(new Timestamp(System.currentTimeMillis()));
-        Transaction transactionsaved = transactionRepository.save(transaction);
+
 
         FTPClient ftpClient = ftpService.loginFtp();
 
-        byte[] fileContent = ftpService.downloadFile(folderPath, ftpClient);
+        byte[] fileContent = ftpService.downloadFile(transactionRepository,transaction,folderPath, ftpClient);
+
+
         if(fileContent ==null){
             logger.info("nothing to download!");
             return;
         }else{
             logger.info("there is a file to donwload size:"+fileContent.length);
         }
+        Transaction transactionsaved = transactionRepository.save(transaction);
 
         String content = new String(fileContent);
 

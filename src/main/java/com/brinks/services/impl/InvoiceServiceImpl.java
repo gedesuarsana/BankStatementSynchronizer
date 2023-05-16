@@ -168,6 +168,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
             for (InvoiceStatus invoiceStatus : invoiceStatusList) {
 
+                logger.info("process invoice-->"+invoiceStatus.getInvoice_name());
+
                 // List<InvoiceStatus> invoiceStatusList = invoiceStatusRepository.findByInvoiceName(invoiceName);
 
                 // finding the prevously invoice and sum

@@ -20,17 +20,19 @@ public class Transaction {
         this.id = id;
     }
 
-    private String file_name;
+    @Column(name = "file_name")
+    private String fileName;
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
 
     private String status;
 
-    public String getFile_name() {
-        return file_name;
-    }
-
-    public void setFile_name(String file_name) {
-        this.file_name = file_name;
-    }
 
     public String getStatus() {
         return status;

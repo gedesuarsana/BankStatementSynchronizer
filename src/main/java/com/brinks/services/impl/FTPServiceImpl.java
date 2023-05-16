@@ -1,5 +1,7 @@
 package com.brinks.services.impl;
 
+import com.brinks.models.Transaction;
+import com.brinks.repository.TransactionRepository;
 import com.brinks.services.FTPService;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -55,7 +57,7 @@ public class FTPServiceImpl implements FTPService {
         }
     }
     @Override
-    public byte[] downloadFile(String path, FTPClient ftpClient) throws Exception {
+    public byte[] downloadFile(TransactionRepository transactionRepository, Transaction transaction, String path, FTPClient ftpClient) throws Exception {
         FTPFile firstFileToDownload=null;
 
 
@@ -68,6 +70,15 @@ public class FTPServiceImpl implements FTPService {
        }
 
         String fullPath = path+"/"+firstFileToDownload.getName();
+
+       Transaction previousTransaction = transactionRepository.findByFileName(firstFileToDownload.getName());
+
+       if(previousTransaction!=null){
+           return null;
+       }
+
+
+        transaction.setFileName(firstFileToDownload.getName());
 
 
         //ftpClient.enterLocalPassiveMode();

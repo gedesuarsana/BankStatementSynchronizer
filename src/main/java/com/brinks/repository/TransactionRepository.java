@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TransactionRepository extends CrudRepository<Transaction,Integer> {
 
+    Transaction findByFileName(String filename);
+
 }
