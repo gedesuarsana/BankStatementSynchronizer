@@ -248,7 +248,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                 BigDecimal apiAmount = inquiryResponse.getBody().getTotal_payment();
                // BigDecimal apiAmountAfterTax = apiAmount.divide(new BigDecimal(100)).multiply(new BigDecimal(100).add(tax));
 
-
+                if(apiAmount==null){
+                    logger.info("api amount for invoice:"+invoiceStatus.getInvoice_name()+" is empty skip to next invoice!!!");
+                    invoiceStatus.setRemaining_amount(bankAmount);
+                    invoiceStatusRepository.save(invoiceStatus);
+                    continue;
+                }
                 //set remaining amount
                 invoiceStatus.setRemaining_amount(bankAmount.subtract(apiAmount));
 

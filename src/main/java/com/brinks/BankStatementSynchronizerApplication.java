@@ -47,6 +47,9 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
     @Autowired
     InvoiceService invoiceService;
 
+
+    FTPClient ftpClient =null;
+
     Logger logger = LoggerFactory.getLogger(BankStatementSynchronizerApplication.class);
 
     public static void main(String args[]) {
@@ -64,14 +67,16 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
         transaction.setStatus("START");
         transaction.setStart_time(new Timestamp(System.currentTimeMillis()));
 
-
-        FTPClient ftpClient = ftpService.loginFtp();
+        if(ftpClient==null|| !ftpClient.isConnected()) {
+            ftpClient = ftpService.loginFtp();
+        }
 
         byte[] fileContent = ftpService.downloadFile(transactionRepository,transaction,folderPath, ftpClient);
 
 
         if(fileContent ==null){
             logger.info("nothing to download!");
+
             return;
         }else{
             logger.info("there is a file to donwload size:"+fileContent.length);
@@ -79,6 +84,9 @@ public class BankStatementSynchronizerApplication implements CommandLineRunner {
         Transaction transactionsaved = transactionRepository.save(transaction);
 
         String content = new String(fileContent);
+
+        ftpClient.logout();
+        ftpClient.disconnect();
 
         List<String> swiftItem = CommonUtils.splitSwiftMessage(content);
 
